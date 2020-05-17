@@ -45,6 +45,16 @@ def dprint(*input):
 		print(*input)
 
 
+def open_port():
+	global port
+
+	try:
+		port = serial.Serial(port_name, baudrate, timeout=1)
+		dprint("Opened serial port {:s} with baud {:d}".format(port_name, baudrate))
+	except serial.serialutil.SerialException:
+		dprint("ERROR: Could not open serial port", port_name)
+
+
 def close_port():
 	if port:
 		dprint("Closed serial port {:s}".format(port_name))
@@ -172,8 +182,7 @@ def script_update(settings):
 	if new_port != port_name or baudrate != current_baud:
 		close_port()
 		port_name = new_port
-		port = serial.Serial(port_name, baudrate, timeout=1)
-		dprint("Opened serial port {:s} with baud {:d}".format(port_name, baudrate))
+		open_port()
 
 	create_muted_callback(obs.obs_data_get_string(settings, "source"))  # create 'muted' callback for source
 
@@ -210,10 +219,6 @@ def script_properties():
 	obs.obs_properties_add_bool(props, "debug", "Print Debug Messages")
 
 	return props
-
-
-def script_save(settings):
-	pass
 
 
 def script_load(settings):
