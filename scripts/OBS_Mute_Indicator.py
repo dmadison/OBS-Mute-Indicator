@@ -29,7 +29,7 @@ import serial.tools.list_ports
 
 debug = False  # default to "False" until overwritten by properties
 port_name = ""  # serial port, as device name
-baudrate = 9600  # serial port baudrate
+baudrate = 115200  # serial port baudrate
 
 # Global Variables
 
@@ -206,7 +206,7 @@ def script_properties():
 		obs.obs_property_list_add_string(port_list, port.device, port.device)
 
 	# Create a list of selectable baud rates
-	baudrates = [2000000, 1000000, 500000, 250000, 230400, 115200, 57600, 38400, 31250, 28800, 19200, 14400, 9600, 4800, 2400, 1200, 600, 300]
+	baudrates = [115200, 57600, 38400, 31250, 28800, 19200, 14400, 9600, 4800, 2400, 1200, 600, 300]
 	baud_list = obs.obs_properties_add_list(props, "baud", "Baudrate", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_INT)
 
 	for rate in baudrates:
