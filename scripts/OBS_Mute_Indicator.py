@@ -34,6 +34,7 @@ baudrate = 9600  # serial port baudrate
 # Global Variables
 
 existing_id = None  # source id for the current callback
+port = None  # serial port object (PySerial)
 
 # ------------------------------------------------------------
 
@@ -44,6 +45,12 @@ def dprint(*input):
 		print(*input)
 
 
+def close_port():
+	if port:
+		dprint("Closed serial port {:s}".format(port_name))
+		port.close()
+
+
 def write_output(muted):
 	if not port_name:
 		return  # no serial port
@@ -52,9 +59,7 @@ def write_output(muted):
 	output_terminated = output + '\n'  # adding terminator
 
 	try:
-		with serial.Serial(port_name, baudrate, timeout=1) as ser:
-				ser.write(output_terminated.encode('utf-8'))
-
+		port.write(output_terminated.encode('utf-8'))
 	except serial.serialutil.SerialException:
 		dprint("ERROR: Device on port {:s} not found".format(port_name))
 	else:
@@ -155,12 +160,22 @@ def script_description():
 
 
 def script_update(settings):
-	global debug, port_name, baudrate
+	global debug, port_name, baudrate, port
 
 	debug = obs.obs_data_get_bool(settings, "debug")  # for printing debug messages
 
-	port_name = obs.obs_data_get_string(settings, "port")  # serial device port name
+	new_port = obs.obs_data_get_string(settings, "port")  # serial device port name
 	baudrate = obs.obs_data_get_int(settings, "baud")  # serial baud rate
+
+	current_baud = None
+	if port is not None:
+		current_baud = port.baudrate
+
+	if new_port != port_name or baudrate != current_baud:
+		close_port()
+		port_name = new_port
+		port = serial.Serial(port_name, baudrate, timeout=1)
+		dprint("Opened serial port {:s} with baud {:d}".format(port_name, baudrate))
 
 	create_muted_callback(obs.obs_data_get_string(settings, "source"))  # create 'muted' callback for source
 
@@ -208,5 +223,6 @@ def script_load(settings):
 
 
 def script_unload():
+	close_port()  # close the serial port
 	remove_muted_callback(existing_id)  # remove the callback if it exists
 	dprint("OBS Mute Indicator Script Unloaded. Goodbye! <3")
