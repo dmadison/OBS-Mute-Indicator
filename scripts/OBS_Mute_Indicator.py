@@ -90,37 +90,37 @@ def test_unmute(prop, props):
 	write_output(False)
 
 
-def create_muted_callback(source_name):
+def create_muted_callback(sn):
 	global callback_name
 
-	if source_name is None or source_name == callback_name:
+	if sn is None or sn == callback_name:
 		return  # source hasn't changed and callback is already set
 
 	if callback_name is not None:
 		remove_muted_callback(callback_name)
 
-	source = obs.obs_get_source_by_name(source_name)
+	source = obs.obs_get_source_by_name(sn)
 
 	if source is None:
-		dprint("ERROR: Could not create callback for", source_name)
+		dprint("ERROR: Could not create callback for", sn)
 		return
 
 	handler = obs.obs_source_get_signal_handler(source)
 	obs.signal_handler_connect(handler, "mute", mute_callback)
-	callback_name = source_name  # save id for future reference
+	callback_name = sn  # save name for future reference
 	dprint("Added callback for \"{:s}\"".format(obs.obs_source_get_name(source)))
 
 	obs.obs_source_release(source)
 
 
-def remove_muted_callback(source_name):
-	if source_name is None:
+def remove_muted_callback(sn):
+	if sn is None:
 		return  # no callback is set
 
-	source = obs.obs_get_source_by_name(source_name)
+	source = obs.obs_get_source_by_name(sn)
 
 	if source is None:
-		dprint("ERROR: Could not remove callback for", source_name)
+		dprint("ERROR: Could not remove callback for", sn)
 		return
 
 	handler = obs.obs_source_get_signal_handler(source)
