@@ -34,6 +34,7 @@ baudrate = 115200  # serial port baudrate
 
 # Global Variables
 
+sources_loaded = False  # set to 'True' when sources are presumed loaded
 callback_name = None  # source name for the current callback
 port = None  # serial port object (PySerial)
 
@@ -95,7 +96,7 @@ def create_muted_callback(sn):
 	global callback_name
 
 	if sn is None or sn == callback_name:
-		return  # source hasn't changed and callback is already set
+		return False # source hasn't changed or callback is already set
 
 	if callback_name is not None:
 		remove_muted_callback(callback_name)
@@ -103,8 +104,9 @@ def create_muted_callback(sn):
 	source = obs.obs_get_source_by_name(sn)
 
 	if source is None:
-		dprint("ERROR: Could not create callback for", sn)
-		return
+		if sources_loaded:  # don't print if sources are still loading
+			dprint("ERROR: Could not create callback for", sn)
+		return False
 
 	handler = obs.obs_source_get_signal_handler(source)
 	obs.signal_handler_connect(handler, "mute", mute_callback)
@@ -113,22 +115,26 @@ def create_muted_callback(sn):
 
 	obs.obs_source_release(source)
 
+	return True
+
 
 def remove_muted_callback(sn):
 	if sn is None:
-		return  # no callback is set
+		return False # no callback is set
 
 	source = obs.obs_get_source_by_name(sn)
 
 	if source is None:
 		dprint("ERROR: Could not remove callback for", sn)
-		return
+		return False
 
 	handler = obs.obs_source_get_signal_handler(source)
 	obs.signal_handler_disconnect(handler, "mute", mute_callback)
 	dprint("Removed callback for \"{:s}\"".format(obs.obs_source_get_name(source)))
 
 	obs.obs_source_release(source)
+
+	return True
 
 
 def list_audio_sources():
@@ -150,6 +156,21 @@ def list_audio_sources():
 	obs.source_list_release(sources)
 
 	return audio_sources
+
+
+def source_loading():
+	global sources_loaded
+
+	source = obs.obs_get_source_by_name(source_name)
+
+	if source and create_muted_callback(source_name):
+		sources_loaded = True  #sources loaded, no need for this anymore
+		obs.timer_remove(source_loading)  # delete this timer
+	else:
+		dprint("Waiting to load sources...")
+
+	obs.obs_source_release(source)
+
 
 
 # ------------------------------------------------------------
@@ -186,7 +207,9 @@ def script_update(settings):
 		open_port()
 
 	source_name = obs.obs_data_get_string(settings, "source")
-	create_muted_callback(source_name)  # create 'muted' callback for source
+
+	if sources_loaded:
+		create_muted_callback(source_name)  # create 'muted' callback for source
 
 
 def script_properties():
@@ -224,6 +247,7 @@ def script_properties():
 
 
 def script_load(settings):
+	obs.timer_add(source_loading, 10)  # brute force - try to load sources every 10 ms until the callback is created
 	dprint("OBS Mute Indicator Script Loaded")
 
 
