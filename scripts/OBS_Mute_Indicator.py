@@ -28,6 +28,7 @@ import serial.tools.list_ports
 # Script Properties
 
 debug = False  # default to "False" until overwritten by properties
+source_name = ""  # source name to monitor, stored from properties
 port_name = ""  # serial port, as device name
 baudrate = 115200  # serial port baudrate
 
@@ -168,7 +169,7 @@ def script_description():
 
 
 def script_update(settings):
-	global debug, port_name, baudrate, port
+	global debug, source_name, port_name, baudrate, port
 
 	debug = obs.obs_data_get_bool(settings, "debug")  # for printing debug messages
 
@@ -184,7 +185,8 @@ def script_update(settings):
 		port_name = new_port
 		open_port()
 
-	create_muted_callback(obs.obs_data_get_string(settings, "source"))  # create 'muted' callback for source
+	source_name = obs.obs_data_get_string(settings, "source")
+	create_muted_callback(source_name)  # create 'muted' callback for source
 
 
 def script_properties():
