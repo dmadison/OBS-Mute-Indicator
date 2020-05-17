@@ -1,0 +1,1 @@
+# OBS Mute Indicator Script
