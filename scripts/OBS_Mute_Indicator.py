@@ -33,7 +33,7 @@ baudrate = 9600  # serial port baudrate
 
 # Global Variables
 
-existing_id = None  # source id for the current callback
+callback_name = None  # source name for the current callback
 port = None  # serial port object (PySerial)
 
 # ------------------------------------------------------------
@@ -80,50 +80,48 @@ def test_unmute(prop, props):
 	write_output(False)
 
 
-def create_muted_callback(source_id):
-	global existing_id
+def create_muted_callback(source_name):
+	global callback_name
 
-	if source_id == existing_id:
+	if source_name is None or source_name == callback_name:
 		return  # source hasn't changed and callback is already set
 
-	if existing_id is not None:
-		remove_muted_callback(existing_id)
+	if callback_name is not None:
+		remove_muted_callback(callback_name)
 
-	sources = obs.obs_enum_sources()
+	source = obs.obs_get_source_by_name(source_name)
 
-	for source in sources:
-		current_id = obs.obs_source_get_id(source)
+	if source is None:
+		dprint("ERROR: Could not create callback for", source_name)
+		return
 
-		if current_id == source_id:
-			handler = obs.obs_source_get_signal_handler(source)
-			obs.signal_handler_connect(handler, "mute", mute_callback)
-			existing_id = source_id  # save id for future reference
-			dprint("Added callback for \"{:s}\" ({:s})".format(obs.obs_source_get_name(source), current_id))
-			break
+	handler = obs.obs_source_get_signal_handler(source)
+	obs.signal_handler_connect(handler, "mute", mute_callback)
+	callback_name = source_name  # save id for future reference
+	dprint("Added callback for \"{:s}\"".format(obs.obs_source_get_name(source)))
 
-	obs.source_list_release(sources)
+	obs.obs_source_release(source)
 
 
-def remove_muted_callback(source_id):
-	if source_id is None:
+def remove_muted_callback(source_name):
+	if source_name is None:
 		return  # no callback is set
 
-	sources = obs.obs_enum_sources()
+	source = obs.obs_get_source_by_name(source_name)
 
-	for source in sources:
-		current_id = obs.obs_source_get_id(source)
+	if source is None:
+		dprint("ERROR: Could not remove callback for", source_name)
+		return
 
-		if current_id == source_id:
-			handler = obs.obs_source_get_signal_handler(source)
-			obs.signal_handler_disconnect(handler, "mute", mute_callback)
-			dprint("Removed callback for \"{:s}\" ({:s})".format(obs.obs_source_get_name(source), current_id))
-			break
+	handler = obs.obs_source_get_signal_handler(source)
+	obs.signal_handler_disconnect(handler, "mute", mute_callback)
+	dprint("Removed callback for \"{:s}\"".format(obs.obs_source_get_name(source)))
 
-	obs.source_list_release(sources)
+	obs.obs_source_release(source)
 
 
 def list_audio_sources():
-	audio_sources = {}  # empty dictionary
+	audio_sources = []
 	sources = obs.obs_enum_sources()
 
 	for source in sources:
@@ -136,7 +134,7 @@ def list_audio_sources():
 			composite = capabilities & obs.OBS_SOURCE_COMPOSITE
 
 			if has_audio and not has_video and not composite:
-				audio_sources[obs.obs_source_get_id(source)] = obs.obs_source_get_name(source)
+				audio_sources.append(obs.obs_source_get_name(source))
 
 	obs.source_list_release(sources)
 
@@ -188,8 +186,8 @@ def script_properties():
 
 	source_list = obs.obs_properties_add_list(props, "source", "Audio Source", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 
-	for id, name in audio_sources.items():
-		obs.obs_property_list_add_string(source_list, name, id)
+	for name in audio_sources:
+		obs.obs_property_list_add_string(source_list, name, name)
 
 	# Create list of available serial ports
 	port_list = obs.obs_properties_add_list(props, "port", "Serial Port", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
@@ -224,5 +222,5 @@ def script_load(settings):
 
 def script_unload():
 	close_port()  # close the serial port
-	remove_muted_callback(existing_id)  # remove the callback if it exists
+	remove_muted_callback(callback_name)  # remove the callback if it exists
 	dprint("OBS Mute Indicator Script Unloaded. Goodbye! <3")
