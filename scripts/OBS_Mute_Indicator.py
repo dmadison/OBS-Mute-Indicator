@@ -27,7 +27,7 @@ import serial.tools.list_ports
 
 # Script Properties
 
-debug = False  # default to "False" until overwritten by properties
+debug = True  # default to "True" until overwritten by properties
 source_name = ""  # source name to monitor, stored from properties
 port_name = ""  # serial port, as device name
 baudrate = 115200  # serial port baudrate
