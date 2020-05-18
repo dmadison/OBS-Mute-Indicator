@@ -16,10 +16,22 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Program:      MuteIndicator
+ *  Description:  Listens for a "muted" (on) or "unmuted" (off) message on the
+ *                serial interface. Sets an LED indicator light to blink
+ *                accordingly.
  */
 
+// User Options
 
 const uint8_t LED_Pin = LED_BUILTIN;
+
+const uint8_t Brightness = 255;  // 0 - 255, only if connected to a PWM pin
+const unsigned long BlinkSpeed = 200;  // ms per period
+const boolean InvertOutput = false;
+
+// ----------------------------------------------
 
 // Enumeration for getting the 'mute' output from the 
 // parsed serial buffer
@@ -29,24 +41,31 @@ enum class MuteState {
 	Unmuted = 2,
 };
 
+boolean lightOn = false;  // flag to track the 'on' state of the light
+boolean blinkState = InvertOutput;  // state of the blinking LED, high or low
+unsigned long lastBlink = 0;  // ms, last time the blink switched
+
 
 void setup() {
 	Serial.begin(115200);
 
 	pinMode(LED_Pin, OUTPUT);
+	digitalWrite(LED_Pin, blinkState);  // turn off initially
 }
 
 void loop() {
 	MuteState state = parseSerialMute();
 
 	if (state != MuteState::Unset) {
-		boolean muted = (state == MuteState::Muted);  // 1 if muted, 0 if not
-		setMuted(muted);
+		lightOn = (state == MuteState::Muted);  // 'true' if muted, 'false' if not
+		if (lightOn == false) digitalWrite(LED_Pin, InvertOutput);  // if turning off, disable LED
 	}
-}
 
-void setMuted(boolean muted) {
-	digitalWrite(LED_Pin, muted);
+	if (lightOn == true && millis() - lastBlink >= BlinkSpeed / 2) {
+		lastBlink = millis();
+		blinkState = !blinkState;  // flip output
+		analogWrite(LED_Pin, Brightness * blinkState);  // write to LED
+	}
 }
 
 MuteState parseSerialMute() {
