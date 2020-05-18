@@ -32,6 +32,10 @@ source_name = ""  # source name to monitor, stored from properties
 port_name = ""  # serial port, as device name
 baudrate = 115200  # serial port baudrate
 
+# Constants
+
+init_state_delay = 1600  # ms before sending initial state (wait for device startup)
+
 # Global Variables
 
 sources_loaded = False  # set to 'True' when sources are presumed loaded
@@ -53,6 +57,10 @@ def open_port():
 	try:
 		port = serial.Serial(port_name, baudrate, timeout=1)
 		dprint("Opened serial port {:s} with baud {:d}".format(port_name, baudrate))
+
+		if callback_name:  # if we have a 'mute' callback...
+			obs.timer_add(send_initial_state, init_state_delay)  # send the initial state
+
 	except serial.serialutil.SerialException:
 		dprint("ERROR: Could not open serial port", port_name)
 
@@ -77,6 +85,25 @@ def write_output(muted):
 	else:
 		output = "\"{:s}\"".format(output)  # adding quotes
 		dprint("Wrote: {:9s} to {:s} at {:d} baud".format(output, port_name, baudrate))
+
+
+def send_initial_state():
+	muted = get_muted(source_name)
+	dprint("Sending initial state (startup delayed {:d} ms)".format(init_state_delay))
+	write_output(muted)
+	obs.remove_current_callback()  # remove this one-shot timer
+
+
+def get_muted(sn):
+	source = obs.obs_get_source_by_name(sn)
+
+	if source is None:
+		return None
+
+	muted = obs.obs_source_muted(source)
+	obs.obs_source_release(source)
+
+	return muted
 
 
 def mute_callback(calldata):
@@ -112,6 +139,9 @@ def create_muted_callback(sn):
 	obs.signal_handler_connect(handler, "mute", mute_callback)
 	callback_name = sn  # save name for future reference
 	dprint("Added callback for \"{:s}\"".format(obs.obs_source_get_name(source)))
+
+	if port:  # if the serial port is open...
+		obs.timer_add(send_initial_state, init_state_delay)  # send the initial state
 
 	obs.obs_source_release(source)
 
@@ -265,6 +295,7 @@ def script_load(settings):
 
 def script_unload():
 	obs.timer_remove(source_loading)
+	obs.timer_remove(send_initial_state)
 	obs.timer_remove(flush_serial_input)
 
 	close_port()  # close the serial port
