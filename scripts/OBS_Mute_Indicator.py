@@ -165,7 +165,7 @@ def source_loading():
 
 	if source and create_muted_callback(source_name):
 		sources_loaded = True  #sources loaded, no need for this anymore
-		obs.timer_remove(source_loading)  # delete this timer
+		obs.remove_current_callback()  # delete this timer
 	else:
 		dprint("Waiting to load sources...")
 
@@ -252,6 +252,8 @@ def script_load(settings):
 
 
 def script_unload():
+	obs.timer_remove(source_loading)
+
 	close_port()  # close the serial port
 	remove_muted_callback(callback_name)  # remove the callback if it exists
 	dprint("OBS Mute Indicator Script Unloaded. Goodbye! <3")
