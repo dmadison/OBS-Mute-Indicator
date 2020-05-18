@@ -172,6 +172,17 @@ def source_loading():
 	obs.obs_source_release(source)
 
 
+def flush_serial_input():
+	global port
+
+	if not port:
+		return  # port is not open
+
+	try:
+		port.reset_input_buffer()  # clear input to prevent buffer overrun
+	except serial.serialutil.SerialException:
+		pass
+
 
 # ------------------------------------------------------------
 
@@ -248,11 +259,13 @@ def script_properties():
 
 def script_load(settings):
 	obs.timer_add(source_loading, 10)  # brute force - try to load sources every 10 ms until the callback is created
+	obs.timer_add(flush_serial_input, 1000)  # flush serial input buffer every second to prevent buffer overruns
 	dprint("OBS Mute Indicator Script Loaded")
 
 
 def script_unload():
 	obs.timer_remove(source_loading)
+	obs.timer_remove(flush_serial_input)
 
 	close_port()  # close the serial port
 	remove_muted_callback(callback_name)  # remove the callback if it exists
