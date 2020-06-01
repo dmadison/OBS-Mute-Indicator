@@ -58,14 +58,11 @@ void loop() {
 
 	if (state != MuteState::Unset) {
 		lightOn = (state == MuteState::Muted);  // 'true' if muted, 'false' if not
-		if (lightOn == false) setLED(LOW);  // if turning off, disable LED
+		setLED(lightOn);  // set LED to the output state
+		lastBlink = millis();  // reset flash timer
 	}
 
-	if (lightOn == true && millis() - lastBlink >= BlinkSpeed / 2) {
-		lastBlink = millis();
-		ledState = !ledState;  // flip output
-		setLED(ledState);
-	}
+	if (lightOn == true) blinkLED();  // if the light is enabled, blink
 }
 
 void setLED(boolean state) {
@@ -74,6 +71,14 @@ void setLED(boolean state) {
 	
 	if (state == true) analogWrite(LED_Pin, Brightness);  // ON = PWM for brightness
 	else digitalWrite(LED_Pin, LOW);  // OFF
+}
+
+void blinkLED() {
+	if (millis() - lastBlink < BlinkSpeed / 2) return;  // no blinking (at least not yet)
+
+	lastBlink = millis();  // save timestamp for next time
+	ledState = !ledState;  // flip output
+	setLED(ledState);
 }
 
 MuteState parseSerialMute() {
