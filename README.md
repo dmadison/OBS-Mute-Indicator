@@ -29,7 +29,7 @@ Output commands ('muted' / 'unmuted') are sent as utf-8 encoded strings and newl
 
 This repo contains three Arduino programs, each controlled through the OBS script and the USB serial interface. Each one renders the 'mute' data in a different way:
 
-* **MuteIndicator**: flash an LED.
+* **MuteIndicator**: blink an LED / toggle an output pin.
 * **MuteStrip**: pulse an addressable LED strip.
 * **MuteFlag**: use a servo to raise a physical flag and wave it around.
 

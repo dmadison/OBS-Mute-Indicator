@@ -28,7 +28,7 @@
 const uint8_t LED_Pin = LED_BUILTIN;
 
 const uint8_t Brightness = 255;  // 0 - 255, only if connected to a PWM pin
-const unsigned long BlinkSpeed = 200;  // ms per period
+const unsigned long BlinkSpeed = 200;  // ms per blink period, '0' for no blinking
 const boolean InvertOutput = false;
 
 // ----------------------------------------------
@@ -74,7 +74,7 @@ void setLED(boolean state) {
 }
 
 void blinkLED() {
-	if (millis() - lastBlink < BlinkSpeed / 2) return;  // no blinking (at least not yet)
+	if (BlinkSpeed == 0 || millis() - lastBlink < BlinkSpeed / 2) return;  // no blinking (at least not yet)
 
 	lastBlink = millis();  // save timestamp for next time
 	ledState = !ledState;  // flip output
