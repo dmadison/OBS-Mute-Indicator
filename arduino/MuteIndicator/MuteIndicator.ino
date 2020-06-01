@@ -42,7 +42,7 @@ enum class MuteState {
 };
 
 boolean lightOn = false;  // flag to track the 'on' state of the light
-boolean blinkState = InvertOutput;  // state of the blinking LED, high or low
+boolean ledState = LOW;  // state of the output LED, high or low
 unsigned long lastBlink = 0;  // ms, last time the blink switched
 
 
@@ -50,7 +50,7 @@ void setup() {
 	Serial.begin(115200);
 
 	pinMode(LED_Pin, OUTPUT);
-	digitalWrite(LED_Pin, blinkState);  // turn off initially
+	setLED(LOW); // turn off initially
 }
 
 void loop() {
@@ -58,14 +58,22 @@ void loop() {
 
 	if (state != MuteState::Unset) {
 		lightOn = (state == MuteState::Muted);  // 'true' if muted, 'false' if not
-		if (lightOn == false) digitalWrite(LED_Pin, InvertOutput);  // if turning off, disable LED
+		if (lightOn == false) setLED(LOW);  // if turning off, disable LED
 	}
 
 	if (lightOn == true && millis() - lastBlink >= BlinkSpeed / 2) {
 		lastBlink = millis();
-		blinkState = !blinkState;  // flip output
-		analogWrite(LED_Pin, Brightness * blinkState);  // write to LED
+		ledState = !ledState;  // flip output
+		setLED(ledState);
 	}
+}
+
+void setLED(boolean state) {
+	ledState = state;  // save state for later reference
+	if (InvertOutput) state = !state;  // if inverting, flip output state
+	
+	if (state == true) analogWrite(LED_Pin, Brightness);  // ON = PWM for brightness
+	else digitalWrite(LED_Pin, LOW);  // OFF
 }
 
 MuteState parseSerialMute() {
