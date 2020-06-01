@@ -10,6 +10,11 @@ As of this writing OBS seems to have issues with the newest versions of Python (
 
 You need [Python 3.6](https://www.python.org/downloads/) installed on your PC. The bit version of your Python installation must match your OBS installation - use "x86-64" for 64 bit OBS Studio and "x86" for 32 bit OBS Studio. In the menu in OBS Studio, go to `Tools` and then `Scripts`. Then in the "Python Settings" tab, set the path to point to the Python installation folder.
 
+This script relies on [the pySerial module](https://pypi.org/project/pyserial/) (3.0+) to handle serial bus communication. You can install pySerial using the following command:
+```bash
+python -m pip install pyserial
+```
+
 Add the mute indicator script to the "Scripts" window using the '+' icon on the bottom left. Select the script in the "Loaded Scripts" panel, and if everything is set up correctly you should see the script properties show up on the right.
 
 ### Script Options
