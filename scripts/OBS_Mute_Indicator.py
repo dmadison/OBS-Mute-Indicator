@@ -66,13 +66,21 @@ def open_port():
 
 
 def close_port():
-	if port:
-		dprint("Closed serial port {:s}".format(port_name))
+	global port
+
+	if not port:
+		return  # nothing to close
+
+	try:
 		port.close()
+		port = None  # remove port object
+		dprint("Closed serial port {:s}".format(port_name))
+	except serial.serialutil.SerialException:
+		dprint("ERROR: Uhhh couldn't close the existing port {:s}? That's weird".format(port_name))
 
 
 def write_output(muted):
-	if not port_name:
+	if not port:
 		return  # no serial port
 
 	output = "muted" if muted else "unmuted"
