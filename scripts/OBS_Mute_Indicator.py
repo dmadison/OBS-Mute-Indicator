@@ -54,6 +54,9 @@ def dprint(*input):
 def open_port():
 	global port
 
+	if port_name == "Disconnected":
+		return  # don't attempt to connect on the N/A option
+
 	try:
 		port = serial.Serial(port_name, baudrate, timeout=1)
 		dprint("Opened serial port {:s} with baud {:d}".format(port_name, baudrate))
@@ -275,6 +278,7 @@ def script_properties():
 	# Create list of available serial ports
 	port_list = obs.obs_properties_add_list(props, "port", "Serial Port", obs.OBS_COMBO_TYPE_LIST, obs.OBS_COMBO_FORMAT_STRING)
 
+	obs.obs_property_list_add_string(port_list, "(Disconnect)", "Disconnected")  # include blank option at top
 	com_ports = serial.tools.list_ports.comports()
 	for port in com_ports:
 		obs.obs_property_list_add_string(port_list, port.device, port.device)
