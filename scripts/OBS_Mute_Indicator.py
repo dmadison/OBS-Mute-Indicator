@@ -187,11 +187,11 @@ def list_audio_sources():
 			# output flag bit field: https://obsproject.com/docs/reference-sources.html?highlight=sources#c.obs_source_info.output_flags
 			capabilities = obs.obs_source_get_output_flags(source)
 
-			has_video = capabilities & obs.OBS_SOURCE_VIDEO
 			has_audio = capabilities & obs.OBS_SOURCE_AUDIO
-			composite = capabilities & obs.OBS_SOURCE_COMPOSITE
+			# has_video = capabilities & obs.OBS_SOURCE_VIDEO
+			# composite = capabilities & obs.OBS_SOURCE_COMPOSITE
 
-			if has_audio and not has_video and not composite:
+			if has_audio:
 				audio_sources.append(obs.obs_source_get_name(source))
 
 	obs.source_list_release(sources)
