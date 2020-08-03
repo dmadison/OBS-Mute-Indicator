@@ -26,9 +26,9 @@ Fill out the configuration settings in the script properties:
 
 The serial connection is opened automatically, either on script load or when serial settings have changed.
 
-You can sending test 'mute' and 'unmute' messages by pressing the respective buttons. These buttons do *not* change the mute state of the audio input.
+You can test sending 'mute' and 'unmute' messages by pressing the respective buttons. These buttons do *not* change the mute state of the audio input.
 
-Output commands ('muted' / 'unmuted') are sent as utf-8 encoded strings and newline terminated.
+Output commands ('muted' / 'unmuted') are sent as utf-8 encoded strings and are newline terminated.
 
 ## Arduino Setup
 
@@ -41,4 +41,4 @@ This repo contains three Arduino programs, each controlled through the OBS scrip
 These programs were tested with an Arduino Uno (328P) and a Leonardo (32U4), allthough just about any Arduino should work. For each program, user-configurable options including pin assignments are listed at the top and commented.
 
 ## License
-The contents of this repository are licensed under the terms of the [GNU General Public License v3.0](https://www.gnu.org/licens
+The contents of this repository are licensed under the terms of the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
