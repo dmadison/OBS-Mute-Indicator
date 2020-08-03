@@ -2,6 +2,8 @@
 
 This repo contains files to create a physical indicator for the "mute" state of an OBS Studio audio source. The state is automatically read by a Python script which then sends the data over USB (CDC serial) to an Arduino, which parses it and sets an indicator.
 
+For more information, read the article on [PartsNotIncluded.com](https://www.partsnotincluded.com/making-obs-mute-indicator/).
+
 ## Script Installation and Setup
 The script only works with OBS Studio versions 21.x and later. If you have an older version you will need to update.
 
