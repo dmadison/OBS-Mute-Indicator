@@ -1,6 +1,6 @@
 /*
  *  Project     OBS Mute Indicator
- *  @author     David Madison
+ *  @author     David Madison, Stephan Beutel
  *  @link       github.com/dmadison/OBS-Mute-Indicator
  *  @license    GPLv3 - Copyright (c) 2020 David Madison
  *
@@ -25,96 +25,158 @@
 
 // User Options
 
-const uint8_t LED_Pin = LED_BUILTIN;
+int redLedPins[] = {6, 7, 8, 9};
+int greenLedPins[] = {4, 5};
 
-const uint8_t Brightness = 255;  // 0 - 255, only if connected to a PWM pin
-const unsigned long BlinkSpeed = 200;  // ms per blink period, '0' for no blinking
+unsigned long blinkSpeed = 500; // ms per blink period, '0' for no blinking
 const boolean InvertOutput = false;
 
 // ----------------------------------------------
 
-// Enumeration for getting the 'mute' output from the 
+// Enumeration for getting the 'mute' output from the
 // parsed serial buffer
-enum class MuteState {
-	Unset = 0,
-	Muted = 1,
-	Unmuted = 2,
+enum class MuteState
+{
+  Unset = 0,
+  Muted = 1,
+  Unmuted = 2,
 };
 
-boolean lightOn = false;  // flag to track the 'on' state of the light
-boolean ledState = LOW;  // state of the output LED, high or low
-unsigned long lastBlink = 0;  // ms, last time the blink switched
+boolean lightOn = false;     // flag to track the 'on' state of the light
+boolean ledState = LOW;      // state of the output LED, high or low
+unsigned long lastBlink = 0; // ms, last time the blink switched
 
+int delayTime = 5000; // TESTING
+MuteState parsedState;
 
-void setup() {
-	Serial.begin(115200);
+void setup()
+{
+  Serial.begin(115200);
+  int index;
+  for (index = 0; index <= 3; index++)
+  {
+    pinMode(redLedPins[index], OUTPUT);
+  }
+  for (index = 0; index <= 1; index++)
+  {
+    pinMode(greenLedPins[index], OUTPUT);
+  }
 
-	pinMode(LED_Pin, OUTPUT);
-	setLED(LOW); // turn off initially
+  setRedLED(LOW);    // turn off initially
+  setGreenLED(HIGH); // turn off initially
 }
 
-void loop() {
-	MuteState state = parseSerialMute();
+void loop()
+{
+  parsedState = parseSerialMute();
 
-	if (state != MuteState::Unset) {
-		lightOn = (state == MuteState::Muted);  // 'true' if muted, 'false' if not
-		setLED(lightOn);  // set LED to the output state
-		lastBlink = millis();  // reset flash timer
-	}
+  //testing(); //TESTING
 
-	if (lightOn == true) blinkLED();  // if the light is enabled, blink
+  if (parsedState != MuteState::Unset)
+  {
+    lightOn = (parsedState == MuteState::Unmuted); // 'true' if muted, 'false' if not
+    setRedLED(lightOn);                            // set LED to the output state
+    setGreenLED(!lightOn);                         // set LED to the output state
+    lastBlink = millis();                          // reset flash timer
+  }
+
+  if (lightOn == true)
+    blinkLED(); // if the light is enabled, blink
 }
 
-void setLED(boolean state) {
-	ledState = state;  // save state for later reference
-	if (InvertOutput) state = !state;  // if inverting, flip output state
-	
-	if (state == true) analogWrite(LED_Pin, Brightness);  // ON = PWM for brightness
-	else digitalWrite(LED_Pin, LOW);  // OFF
+void testing()
+{
+  parsedState = MuteState::Unmuted;
 }
 
-void blinkLED() {
-	if (BlinkSpeed == 0 || millis() - lastBlink < BlinkSpeed / 2) return;  // no blinking (at least not yet)
+void setRedLED(boolean state)
+{
+  ledState = state; // save state for later reference
+  if (InvertOutput)
+    state = !state; // if inverting, flip output state
 
-	lastBlink = millis();  // save timestamp for next time
-	ledState = !ledState;  // flip output
-	setLED(ledState);
+  int index;
+
+  for (index = 0; index <= 3; index++)
+  {
+    if (state == true)
+      digitalWrite(redLedPins[index], HIGH); // ON = PWM for brightness
+    else
+      digitalWrite(redLedPins[index], LOW); // OFF
+  }
 }
 
-MuteState parseSerialMute() {
-	static const uint8_t BufferSize = 32;
-	static char buffer[BufferSize];
-	static uint8_t bIndex = 0;
+void setGreenLED(boolean state)
+{
+  ledState = state; // save state for later reference
+  if (InvertOutput)
+    state = !state; // if inverting, flip output state
 
-	if (!Serial.available()) return MuteState::Unset;  // no data, no update
+  int index;
 
-	// read serial characters into local buffer
-	char c;
-	while (true) {
-		c = Serial.read();
-		if (c == -1 || c == '\n') break;  // no byte available or terminator received
-		buffer[bIndex++] = c;
+  for (index = 0; index <= 1; index++)
+  {
+    if (state == true)
+      digitalWrite(greenLedPins[index], HIGH); // ON = PWM for brightness
+    else
+      digitalWrite(greenLedPins[index], LOW); // OFF
+  }
+}
 
-		if (bIndex >= BufferSize - 1) {  // clear buffer if size exceeded (accounting for null terminator)
-			memset(buffer, 0, BufferSize * sizeof(char));
-			bIndex = 0;
-		}
-	}
+void blinkLED()
+{
+  if (blinkSpeed == 0 || millis() - lastBlink < blinkSpeed / 2)
+    return; // no blinking (at least not yet)
 
-	// if the terminating character is received, process the buffer
-	if (c == '\n') {
-		MuteState muteInput = MuteState::Unset;
+  lastBlink = millis(); // save timestamp for next time
+  ledState = !ledState; // flip output
+  setRedLED(ledState);
+}
 
-		// check input vs strings
-		if (strcasecmp("muted", buffer) == 0) muteInput = MuteState::Muted;
-		else if (strcasecmp("unmuted", buffer) == 0) muteInput = MuteState::Unmuted;
+MuteState parseSerialMute()
+{
+  static const uint8_t BufferSize = 32;
+  static char buffer[BufferSize];
+  static uint8_t bIndex = 0;
 
-		// clear buffer for next input string
-		memset(buffer, 0, BufferSize * sizeof(char));
-		bIndex = 0;
+  if (!Serial.available())
+    return MuteState::Unset; // no data, no update
 
-		return muteInput;
-	}
+  // read serial characters into local buffer
+  char c;
+  while (true)
+  {
+    c = Serial.read();
+    if (c == -1 || c == '\n')
+      break; // no byte available or terminator received
+    buffer[bIndex++] = c;
 
-	return MuteState::Unset;
+    if (bIndex >= BufferSize - 1)
+    { // clear buffer if size exceeded (accounting for null terminator)
+      memset(buffer, 0, BufferSize * sizeof(char));
+      bIndex = 0;
+    }
+  }
+
+  // if the terminating character is received, process the buffer
+  if (c == '\n')
+  {
+    MuteState muteInput = MuteState::Unset;
+
+    // check input vs strings
+    if (strpbrk(buffer, "m") != NULL)
+      muteInput = MuteState::Muted;
+    else if (strpbrk(buffer, "m") == NULL)
+      muteInput = MuteState::Unmuted;
+
+    blinkSpeed = atoi(buffer + 1);
+
+    // clear buffer for next input string
+    memset(buffer, 0, BufferSize * sizeof(char));
+    bIndex = 0;
+
+    return muteInput;
+  }
+
+  return MuteState::Unset;
 }
