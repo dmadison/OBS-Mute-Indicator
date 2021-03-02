@@ -474,3 +474,6 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+arduino/MuteButtonIndicator/MuteButtonIndicator.fzz
+.vscode/arduino.json
+.vscode/c_cpp_properties.json
