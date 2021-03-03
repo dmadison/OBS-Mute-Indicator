@@ -22,32 +22,24 @@
                   serial interface. Sets an LED indicator light to blink
                   accordingly.
 */
-
-// User Options
 #include <Adafruit_NeoPixel.h>
 
-#define PIN 10
+// User Options
+
+#define PIN 10 // pin to control RGB ring
 int numPixels = 12;
-
 const int buttonPin = 2;
-
 unsigned long blinkSpeed = 500; // ms per blink period, '0' for no blinking
-const boolean InvertOutput = false;
-
-// Button
-int lastState = LOW; // the previous state from the input pin
-int currentState;    // the current reading from the input pin
-unsigned long pressedTime = 0;
-unsigned long releasedTime = 0;
-boolean pressed = false;
+uint8_t brightness = 150;       // Initialwert für die Helligkeit (0 bis 50)
 
 // RGB Ring
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(numPixels, PIN, NEO_GRB + NEO_KHZ800);
-uint32_t red = strip.Color(255, 0, 0);   //RGB Farbe Rot
-uint32_t green = strip.Color(0, 255, 0); //RGB Farbe Grün
 
-uint8_t brightness = 100; // Initialwert für die Helligkeit (0 bis 50)
-uint16_t innerColorLoop = 0, outerColorLoop = 0;
+uint32_t unmutedColor = strip.Color(255, 0, 0); //RGB color Unmuted, red
+uint32_t mutedColor = strip.Color(0, 255, 0);   //RGB color Mute, green
+
+static unsigned long last_interrupt_time = 0;
+static boolean initialized = false;
 
 // ----------------------------------------------
 
@@ -60,11 +52,10 @@ enum class MuteState
   Unmuted = 2,
 };
 
-boolean lightOn = false;     // flag to track the 'on' state of the light
-boolean ledState = true;     // state of the output LED, high or low
-unsigned long lastBlink = 0; // ms, last time the blink switched
-
 MuteState parsedState;
+
+int j = 1;
+int direction = 1;
 
 void setup()
 {
@@ -72,47 +63,62 @@ void setup()
 
   attachInterrupt(digitalPinToInterrupt(buttonPin), buttonPressDetected, FALLING);
 
-  pinMode(buttonPin, INPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
 
   // RGB Ring
   strip.begin();
-  strip.setBrightness(brightness); //die Helligkeit setzen 0 dunke -> 255 ganz hell
-  strip.show();                    // Alle NeoPixel sind im Status "aus".
+  strip.setBrightness(brightness); // set initial brightness 0 dark -> 255 bright
+  strip.show();                    // all leds off.
 }
 
 void loop()
 {
-
   if (parsedState != MuteState::Unset)
   {
-    lightOn = (parsedState == MuteState::Unmuted);                                             // 'true' if muted, 'false' if not
-    lightRgbRing(lightOn ? red : green, lightOn ? ledState ? brightness : 0 : brightness / 2); // set LED to the output state
+    if (parsedState == MuteState::Unmuted) // 'true' if muted, 'false' if not
+    {
+      strip.setBrightness(brightness);
+      pulseUnmutedRed();
+    }
+    else
+    {
+      strip.setBrightness(brightness / 3);
+      lightRgbRing(mutedColor);
+    }
   }
   else
   {
     rainbowCycle();
   }
-
-  if (lightOn == true)
-    blinkLED(); // if the light is enabled, blink
 }
 
-void blinkLED()
+void pulseUnmutedRed()
 {
-  if (blinkSpeed == 0 || millis() - lastBlink < blinkSpeed / 2)
-    return; // no blinking (at least not yet)
+  int color = 180 - 10 * j;
+  for (int i = 0; i < numPixels; i++)
+  {
+    strip.setPixelColor(i, strip.Color(color, 0, 0));
+    strip.show();
+  }
+  delay(blinkSpeed / 10);
+  if (j == 11)
+  {
+    direction = -1;
+  }
+  else if (j == 0)
+  {
+    direction = 1;
+  }
 
-  lastBlink = millis(); // save timestamp for next time
-  ledState = !ledState; // flip output
+  j = j + direction;
 }
 
-void lightRgbRing(uint32_t color, uint8_t state)
+void lightRgbRing(uint32_t color)
 {
   uint16_t i, j;
   for (i = 0; i < strip.numPixels(); i++)
   {
     strip.setPixelColor(i, color);
-    strip.setBrightness(state);
   }
   strip.show();
 }
@@ -125,10 +131,9 @@ void rainbowCycle()
     for (i = 0; i < strip.numPixels(); i++)
     {
       strip.setPixelColor(i, ColorWheel(((i * 256 / strip.numPixels()) + j) & 255));
-      strip.setBrightness(map(brightness, 0, 50, 5, 255));
     }
     strip.show();
-    delay(blinkSpeed / 100);
+    delay(blinkSpeed / 50);
   }
 }
 
@@ -151,22 +156,29 @@ uint32_t ColorWheel(byte WheelPos)
 
 void buttonPressDetected()
 {
-  pressed = true;
-  if (parsedState == MuteState::Unmuted)
-    parsedState = MuteState::Muted;
-  else
-    parsedState = MuteState::Unmuted;
-
-  switch (parsedState)
+  if (initialized)
   {
-  case MuteState::Unmuted:
-    Serial.println("u");
-    break;
-  case MuteState::Muted:
-    Serial.println("m");
-    break;
-  default:
-    break;
+    unsigned long interrupt_time = millis();
+    if (interrupt_time - last_interrupt_time > 1000)
+    {
+      if (parsedState == MuteState::Unmuted)
+        parsedState = MuteState::Muted;
+      else
+        parsedState = MuteState::Unmuted;
+
+      switch (parsedState)
+      {
+      case MuteState::Unmuted:
+        Serial.println("u");
+        break;
+      case MuteState::Muted:
+        Serial.println("m");
+        break;
+      default:
+        break;
+      }
+    }
+    last_interrupt_time = interrupt_time;
   }
 }
 
@@ -212,6 +224,9 @@ void serialEvent()
       // clear buffer for next input string
       memset(buffer, 0, BufferSize * sizeof(char));
       bIndex = 0;
+
+      if (!initialized)
+        initialized = true;
     }
   }
   parsedState = muteInput;
