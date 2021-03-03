@@ -105,6 +105,22 @@ def write_output(muted):
             output, port_name, baudrate))
 
 
+def write_reset():
+    if not port:
+        return  # no serial port
+
+    output_terminated = 'r\n'
+
+    try:
+        port.write(output_terminated.encode('utf-8'))
+    except serial.serialutil.SerialException:
+        dprint("ERROR: Device on port {:s} not found".format(port_name))
+    else:
+        output = "\"{:s}\"".format(output)  # adding quotes
+        dprint("Wrote: {:9s} to {:s} at {:d} baud".format(
+            output, port_name, baudrate))
+
+
 def send_initial_state():
     muted = get_muted(source_name)
     dprint("Sending initial state (startup delayed {:d} ms)".format(
@@ -123,6 +139,16 @@ def get_muted(sn):
     obs.obs_source_release(source)
 
     return muted
+
+
+def set_muted(sn, state):
+    source = obs.obs_get_source_by_name(sn)
+
+    if source is None:
+        return None
+
+    obs.obs_source_set_muted(source, state)
+    obs.obs_source_release(source)
 
 
 def mute_callback(calldata):
@@ -222,6 +248,25 @@ def source_loading():
         dprint("Waiting to load sources...")
 
     obs.obs_source_release(source)
+
+
+def handle_button_press():
+    global port
+
+    if not port:
+        return  # port is not open
+
+    try:
+        encoding = 'utf-8'
+        button_state = port.read().decode(encoding)
+        if(button_state == 'm'):
+            set_muted(source_name, True)
+            dprint(button_state)
+        elif(button_state == 'u'):
+            set_muted(source_name, False)
+            dprint(button_state)
+    except serial.serialutil.SerialException:
+        dprint("ERROR: Device on port {:s} not found".format(port_name))
 
 
 def flush_serial_input():
@@ -338,14 +383,17 @@ def script_properties():
 def script_load(settings):
     # brute force - try to load sources every 10 ms until the callback is created
     obs.timer_add(source_loading, 10)
+    # read serial input buffer to get button action
+    obs.timer_add(handle_button_press, 250)
     # flush serial input buffer every second to prevent buffer overruns
     obs.timer_add(flush_serial_input, 1000)
     dprint("OBS Mute Indicator Script Loaded")
 
 
 def script_unload():
-    write_output(True)
+    write_reset()
     obs.timer_remove(source_loading)
+    obs.timer_remove(handle_button_press)
     obs.timer_remove(send_initial_state)
     obs.timer_remove(flush_serial_input)
 
