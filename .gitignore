@@ -477,3 +477,4 @@ cython_debug/
 arduino/MuteButtonIndicator/MuteButtonIndicator.fzz
 .vscode/arduino.json
 .vscode/c_cpp_properties.json
+cad/Mute_Indicator.stl
