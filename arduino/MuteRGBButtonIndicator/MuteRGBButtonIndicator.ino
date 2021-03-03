@@ -218,8 +218,16 @@ void serialEvent()
         muteInput = MuteState::Muted;
       else if (strpbrk(buffer, "u") != NULL)
         muteInput = MuteState::Unmuted;
+      else if (strpbrk(buffer, "r") != NULL)
+      {
+        initialized = false;
+        parsedState = MuteState::Unset;
+        return;
+      }
 
-      blinkSpeed = atoi(buffer + 1);
+      unsigned long speed = atoi(buffer + 1);
+      if (blinkSpeed != speed)
+        blinkSpeed = speed;
 
       // clear buffer for next input string
       memset(buffer, 0, BufferSize * sizeof(char));

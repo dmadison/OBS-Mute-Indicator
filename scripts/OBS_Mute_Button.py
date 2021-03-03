@@ -105,6 +105,22 @@ def write_output(muted):
             output, port_name, baudrate))
 
 
+def write_reset():
+    if not port:
+        return  # no serial port
+
+    output_terminated = 'r\n'
+
+    try:
+        port.write(output_terminated.encode('utf-8'))
+    except serial.serialutil.SerialException:
+        dprint("ERROR: Device on port {:s} not found".format(port_name))
+    else:
+        output = "\"{:s}\"".format(output)  # adding quotes
+        dprint("Wrote: {:9s} to {:s} at {:d} baud".format(
+            output, port_name, baudrate))
+
+
 def send_initial_state():
     muted = get_muted(source_name)
     dprint("Sending initial state (startup delayed {:d} ms)".format(
@@ -375,7 +391,7 @@ def script_load(settings):
 
 
 def script_unload():
-    write_output(True)
+    write_reset()
     obs.timer_remove(source_loading)
     obs.timer_remove(handle_button_press)
     obs.timer_remove(send_initial_state)
